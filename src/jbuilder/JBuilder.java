@@ -6,8 +6,10 @@ import java.awt.LayoutManager;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
@@ -20,6 +22,8 @@ public class JBuilder extends JFrame implements ActionListener
 	private final HashMap<JButton, Runnable> buttons = new HashMap<JButton, Runnable>();
 	public final LayoutManager layout;
 	public static int gap = 10;
+	
+	private AtomicBoolean go = new AtomicBoolean(false);
 	
 	public JBuilder(LayoutManager style)
 	{
@@ -45,13 +49,47 @@ public class JBuilder extends JFrame implements ActionListener
 		return field;
 	}
 	
-	public JBuilder addButton(String text, Runnable onClick)
+	public JComboBox<String> addDropMenu(String[] choices)
+	{
+		JComboBox<String> menu;
+		this.add(menu = new JComboBox<String>(choices));
+		return menu;
+	}
+	
+	public JButton addGetButton(String text, Runnable onClick)
 	{
 		JButton b = new JButton(text);
 		b.addActionListener(this);
 		add(b);
 		
 		buttons.put(b, onClick);
+		return b;
+	}
+	
+	public JBuilder addButton(String text, Runnable onClick)
+	{
+		addGetButton(text, onClick);
+		return this;
+	}
+	
+	public JBuilder go()
+	{
+		go.set(true);
+		return this;
+	}
+	
+	public JBuilder waitFor()
+	{
+		go.set(false);
+		try
+		{
+			while (!go.get())
+				Thread.sleep(100);
+		}
+		catch (InterruptedException e)
+		{
+			e.printStackTrace();
+		}
 		return this;
 	}
 	
@@ -96,6 +134,11 @@ public class JBuilder extends JFrame implements ActionListener
 		return b;
 	}
 	
+	public static JBuilder error(String error)
+	{
+		return info("Error: ", error);
+	}
+	
 	public static JBuilder info(String message)
 	{
 		JBuilder b = new JBuilder(flow());
@@ -119,13 +162,27 @@ public class JBuilder extends JFrame implements ActionListener
 				.addButton("Confirm", () -> b.thenDispose(onConfirm));
 	}
 	
+	public static JBuilder youSure(String message, Runnable onSure)
+	{
+		return yesNo(message, onSure, () -> {});
+	}
+	
 	public static JBuilder yesNo(String message, Runnable onYes, Runnable onNo)
 	{
-		JBuilder b = new JBuilder(new GridLayout(2, 1, gap, gap));
+		JBuilder b = new JBuilder(new GridLayout(2, 2, gap, gap));
 		return b.setClose(DISPOSE_ON_CLOSE)
 				.addLabel(message)
 				.addButton("Yes", () -> b.thenDispose(onYes))
 				.addButton("No", () -> b.thenDispose(onNo));
+	}
+	
+	public static JBuilder eitherOr(String message, String buttonOne, String buttonTwo, Runnable onOne, Runnable onTwo)
+	{
+		JBuilder b = new JBuilder(new GridLayout(2, 2, gap, gap));
+		return b.setClose(DISPOSE_ON_CLOSE)
+				.addLabel(message)
+				.addButton(buttonOne, onOne)
+				.addButton(buttonTwo, onTwo);
 	}
 	
 	public static FlowLayout flow()

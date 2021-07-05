@@ -12,6 +12,7 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
 public class JBuilder extends JFrame implements ActionListener
@@ -56,6 +57,18 @@ public class JBuilder extends JFrame implements ActionListener
 		return menu;
 	}
 	
+	public JTextArea addTextArea()
+	{
+		JTextArea area = new JTextArea();
+		this.add(area);
+		return area;
+	}
+	public JBuilder addTextArea(JTextArea area)
+	{
+		add(area);
+		return this;
+	}
+	
 	public JButton addGetButton(String text, Runnable onClick)
 	{
 		JButton b = new JButton(text);
@@ -64,6 +77,26 @@ public class JBuilder extends JFrame implements ActionListener
 		
 		buttons.put(b, onClick);
 		return b;
+	}
+	
+	public JButton addGetToggleButton(String t1, String t2, Runnable onT1, Runnable onT2)
+	{
+		JButton[] b = new JButton[1];
+		b[0] = addGetButton(t1, () ->
+		{
+			if (b[0].getText().equals(t1))
+			{
+				b[0].setText(t2);
+				onT1.run();
+			}
+			else
+			{
+				b[0].setText(t1);
+				onT2.run();
+			}
+		});
+		
+		return b[0];
 	}
 	
 	public JBuilder addButton(String text, Runnable onClick)
@@ -171,7 +204,7 @@ public class JBuilder extends JFrame implements ActionListener
 	{
 		JBuilder b = new JBuilder(new GridLayout(2, 2, gap, gap));
 		return b.setClose(DISPOSE_ON_CLOSE)
-				.addLabel(message)
+				.addLabel(message).addLabel("")
 				.addButton("Yes", () -> b.thenDispose(onYes))
 				.addButton("No", () -> b.thenDispose(onNo));
 	}
@@ -180,7 +213,7 @@ public class JBuilder extends JFrame implements ActionListener
 	{
 		JBuilder b = new JBuilder(new GridLayout(2, 2, gap, gap));
 		return b.setClose(DISPOSE_ON_CLOSE)
-				.addLabel(message)
+				.addLabel(message).addLabel("")
 				.addButton(buttonOne, onOne)
 				.addButton(buttonTwo, onTwo);
 	}

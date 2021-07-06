@@ -5,8 +5,12 @@ import java.awt.GridLayout;
 import java.awt.LayoutManager;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -23,6 +27,7 @@ public class JBuilder extends JFrame implements ActionListener
 	private final HashMap<JButton, Runnable> buttons = new HashMap<JButton, Runnable>();
 	public final LayoutManager layout;
 	public static int gap = 10;
+	public static int spaces = 2;
 	
 	private AtomicBoolean go = new AtomicBoolean(false);
 	
@@ -39,7 +44,7 @@ public class JBuilder extends JFrame implements ActionListener
 	
 	public JBuilder addLabel(String text)
 	{
-		this.add(new JLabel(text));
+		this.add(new JLabel(spaces(text)));
 		return this;
 	}
 	
@@ -105,6 +110,27 @@ public class JBuilder extends JFrame implements ActionListener
 		return this;
 	}
 	
+	public JBuilder closeGo()
+	{
+		JBuilder th = this;
+		th.addWindowListener(new WindowAdapter()
+		{
+			@Override
+			public void windowClosing(WindowEvent e) { th.go(); }
+		});
+		return th;
+	}
+	
+	public JBuilder onClose(Runnable onClose)
+	{
+		addWindowListener(new WindowAdapter()
+		{
+			@Override
+			public void windowClosing(WindowEvent e) { onClose.run(); }
+		});
+		return this;
+	}
+	
 	public JBuilder go()
 	{
 		go.set(true);
@@ -143,10 +169,21 @@ public class JBuilder extends JFrame implements ActionListener
 	
 	////////////////////////////////////
 	
-	private void thenDispose(Runnable run)
+	public String spaces(String message)
 	{
-		run.run();
-		dispose();
+		String out = message;
+		for (int i = 0; i < spaces; i++)
+			out = " " + out + " ";
+		return out;
+	}
+	
+	private Runnable thenDispose(Runnable run)
+	{
+		return () ->
+		{
+			run.run();
+			dispose();
+		};
 	}
 	
 	public static JBuilder keyValInfo(String[] keys, String[] vals)
@@ -172,6 +209,11 @@ public class JBuilder extends JFrame implements ActionListener
 		return info("Error: ", error);
 	}
 	
+	public static JBuilder warning(String warn)
+	{
+		return info("Warning: ", warn);
+	}
+	
 	public static JBuilder info(String message)
 	{
 		JBuilder b = new JBuilder(flow());
@@ -192,7 +234,7 @@ public class JBuilder extends JFrame implements ActionListener
 		JBuilder b = new JBuilder(new GridLayout(2, 1, gap, gap));
 		return b.setClose(DISPOSE_ON_CLOSE)
 				.addLabel(message)
-				.addButton("Confirm", () -> b.thenDispose(onConfirm));
+				.addButton("Confirm", b.thenDispose(onConfirm));
 	}
 	
 	public static JBuilder youSure(String message, Runnable onSure)
@@ -205,8 +247,8 @@ public class JBuilder extends JFrame implements ActionListener
 		JBuilder b = new JBuilder(new GridLayout(2, 2, gap, gap));
 		return b.setClose(DISPOSE_ON_CLOSE)
 				.addLabel(message).addLabel("")
-				.addButton("Yes", () -> b.thenDispose(onYes))
-				.addButton("No", () -> b.thenDispose(onNo));
+				.addButton("Yes", b.thenDispose(onYes))
+				.addButton("No", b.thenDispose(onNo));
 	}
 	
 	public static JBuilder eitherOr(String message, String buttonOne, String buttonTwo, Runnable onOne, Runnable onTwo)
@@ -214,8 +256,59 @@ public class JBuilder extends JFrame implements ActionListener
 		JBuilder b = new JBuilder(new GridLayout(2, 2, gap, gap));
 		return b.setClose(DISPOSE_ON_CLOSE)
 				.addLabel(message).addLabel("")
-				.addButton(buttonOne, onOne)
-				.addButton(buttonTwo, onTwo);
+				.addButton(buttonOne, b.thenDispose(onOne))
+				.addButton(buttonTwo, b.thenDispose(onTwo));
+	}
+	
+	public static JBuilder choices(String message, String[] names, Runnable[] runs)
+	{
+		if (names.length != runs.length)
+			throw new IllegalStateException("Cannot create a choices menu with arrays of unequal length.");
+		JBuilder b = new JBuilder(new GridLayout(names.length + 1, 1, gap, gap));
+		b.setClose(DISPOSE_ON_CLOSE);
+		b.addLabel(message);
+		for (int i = 0; i < names.length; i++)
+			b.addButton(names[i], b.thenDispose(runs[i]));
+		return b;
+	}
+	
+	public static <T> T[] dataRequest(String message, String[] labels, Function<String, T> parser, T[] array, Consumer<T[]> onGot)
+	{
+		JBuilder build = new JBuilder(new GridLayout(labels.length + 2, 2, gap, gap));
+		build.addLabel(message).addLabel("");
+		JTextField[] fields = new JTextField[labels.length];
+		for (int i = 0; i < labels.length; i++)
+		{
+			build.addLabel(labels[i]);
+			fields[i] = build.addTextField();
+		}
+		build.addButton("Confirm", () ->
+		{
+			boolean valid = true;
+			for (int i = 0; i < fields.length; i++)
+			{
+				valid = true;
+				String str = fields[i].getText();
+				T t = parser.apply(str);
+				if (t == null)
+				{
+					JBuilder.error("Invalid input value: " + str + " for field: " + labels[i]).showFrame();
+					valid = false;
+					break;
+				}
+				else
+				{
+					array[i] = t;
+				}
+			}
+			if (valid)
+			{
+				build.go();
+				build.dispose();
+				onGot.accept(array);
+			}
+		}).showFrame();
+		return array;
 	}
 	
 	public static FlowLayout flow()

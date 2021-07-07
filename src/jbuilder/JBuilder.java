@@ -16,6 +16,7 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
@@ -48,6 +49,13 @@ public class JBuilder extends JFrame implements ActionListener
 		return this;
 	}
 	
+	public JLabel addGetLabel(String text)
+	{
+		JLabel l = new JLabel(spaces(text));
+		add(l);
+		return l;
+	}
+	
 	public JTextField addTextField()
 	{
 		JTextField field;
@@ -55,10 +63,29 @@ public class JBuilder extends JFrame implements ActionListener
 		return field;
 	}
 	
+	public JTextArea addTextArea(int x, int y, boolean editable)
+	{
+		JTextArea area = new JTextArea(x, y);
+		area.setEditable(editable);
+		this.add(new JScrollPane(area));
+		return area;
+	}
+	
 	public JComboBox<String> addDropMenu(String[] choices)
 	{
+		int n = 0;
+		for (int i = 0; i < choices.length; i++)
+			if (choices[i] == null)
+				n++;
+		
+		String[] valid = new String[choices.length - n];
+		int v = 0;
+		for (int i = 0; i < choices.length; i++)
+			if (choices[i] != null)
+				valid[v++] = choices[i];
+		
 		JComboBox<String> menu;
-		this.add(menu = new JComboBox<String>(choices));
+		this.add(menu = new JComboBox<String>(valid));
 		return menu;
 	}
 	
@@ -281,6 +308,7 @@ public class JBuilder extends JFrame implements ActionListener
 		{
 			build.addLabel(labels[i]);
 			fields[i] = build.addTextField();
+			fields[i].setText(array[i].toString());
 		}
 		build.addButton("Confirm", () ->
 		{

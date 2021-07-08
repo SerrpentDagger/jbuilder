@@ -287,6 +287,14 @@ public class JBuilder extends JFrame implements ActionListener
 				.addButton(buttonTwo, b.thenDispose(onTwo));
 	}
 	
+	public static JBuilder confirmOrKeepOption(String message, Runnable onConfirm, Runnable onKeep, Object checkNull)
+	{
+		if (checkNull == null)
+			return JBuilder.confirm(message, onConfirm);
+		else
+			return JBuilder.choices(message, new String[] { "Confirm", "Keep Current" }, new Runnable[] { onConfirm, onKeep });
+	}
+	
 	public static JBuilder choices(String message, String[] names, Runnable[] runs)
 	{
 		if (names.length != runs.length)

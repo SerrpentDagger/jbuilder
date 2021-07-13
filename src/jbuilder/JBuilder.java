@@ -1,5 +1,6 @@
 package jbuilder;
 
+import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.LayoutManager;
@@ -71,6 +72,12 @@ public class JBuilder extends JFrame implements ActionListener
 		return area;
 	}
 	
+	public JBuilder addScrollPane(Component c)
+	{
+		add(new JScrollPane(c));
+		return this;
+	}
+	
 	public JComboBox<String> addDropMenu(String[] choices)
 	{
 		int n = 0;
@@ -121,7 +128,7 @@ public class JBuilder extends JFrame implements ActionListener
 				b[0].setText(t2);
 				onT1.run();
 			}
-			else
+			else if (b[0].getText().equals(t2))
 			{
 				b[0].setText(t1);
 				onT2.run();

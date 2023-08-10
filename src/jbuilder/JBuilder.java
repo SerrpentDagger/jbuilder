@@ -1,13 +1,31 @@
+/**
+ * This file is part of JBuilder, which is a simple windowing utility for Java.
+ * Copyright (c) 2023, SerpentDagger (MRRH) <serpentdagger.contact@gmail.com>.
+ * 
+ * JBuilder is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
+ * 
+ * JBuilder is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE. See the GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License along with JBuilder.
+ * If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package jbuilder;
 
 import java.awt.Component;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.LayoutManager;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -27,15 +45,35 @@ public class JBuilder extends JFrame implements ActionListener
 	/////////////
 	
 	private final HashMap<JButton, Runnable> buttons = new HashMap<JButton, Runnable>();
+	private final ArrayList<OnClose> onCloses = new ArrayList<>();
 	public final LayoutManager layout;
 	public static int gap = 10;
 	public static int spaces = 2;
 	
 	private AtomicBoolean go = new AtomicBoolean(false);
+	private boolean manualClose = true;
 	
 	public JBuilder(LayoutManager style)
 	{
 		layout = style;
+		addWindowListener(new WindowAdapter()
+		{
+			@Override
+			public void windowClosing(WindowEvent e) { onCloses.forEach((onCl) -> onCl.onClose(manualClose)); }
+		});
+	}
+	
+	@Override
+	public void setFont(Font f)
+	{
+		super.setFont(f);
+	}
+	
+	@Override
+	public Component add(Component comp)
+	{
+		comp.setFont(null);
+		return super.add(comp);
 	}
 	
 	public JBuilder setClose(int close)
@@ -68,12 +106,14 @@ public class JBuilder extends JFrame implements ActionListener
 	{
 		JTextArea area = new JTextArea(x, y);
 		area.setEditable(editable);
-		this.add(new JScrollPane(area));
+		area.setFont(null);
+		this.addScrollPane(area);
 		return area;
 	}
 	
 	public JBuilder addScrollPane(Component c)
 	{
+		c.setFont(null);
 		add(new JScrollPane(c));
 		return this;
 	}
@@ -143,25 +183,39 @@ public class JBuilder extends JFrame implements ActionListener
 		addGetButton(text, onClick);
 		return this;
 	}
+	public JBuilder center()
+	{
+		return centerOn(null);
+	}
+	public JBuilder centerOn(JBuilder relative)
+	{
+		this.setLocationRelativeTo(relative);
+		return this;
+	}
 	
 	public JBuilder closeGo()
 	{
-		JBuilder th = this;
-		th.addWindowListener(new WindowAdapter()
-		{
-			@Override
-			public void windowClosing(WindowEvent e) { th.go(); }
-		});
-		return th;
+		return onClose((b) -> this.go());
+//		th.addWindowListener(new WindowAdapter()
+//		{
+//			@Override
+//			public void windowClosing(WindowEvent e) { th.go(); }
+//		});
 	}
 	
 	public JBuilder onClose(Runnable onClose)
 	{
-		addWindowListener(new WindowAdapter()
-		{
-			@Override
-			public void windowClosing(WindowEvent e) { onClose.run(); }
-		});
+//		addWindowListener(new WindowAdapter()
+//		{
+//			@Override
+//			public void windowClosing(WindowEvent e) { onClose.run(); }
+//		});
+		return onClose((b) -> onClose.run());
+	}
+	
+	public JBuilder onClose(OnClose onClose)
+	{
+		onCloses.add(onClose);
 		return this;
 	}
 	
@@ -216,6 +270,8 @@ public class JBuilder extends JFrame implements ActionListener
 		return () ->
 		{
 			run.run();
+			manualClose = false;
+			this.dispatchEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSING));
 			dispose();
 		};
 	}
@@ -361,5 +417,13 @@ public class JBuilder extends JFrame implements ActionListener
 		layout.setVgap(gap);
 		layout.setAlignment(FlowLayout.CENTER);
 		return layout;
+	}
+	
+	///////////////////////
+	
+	@FunctionalInterface
+	public static interface OnClose
+	{
+		public void onClose(boolean manual);
 	}
 }
